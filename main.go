@@ -7,13 +7,13 @@ import (
 )
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("Health endpoint hit")
+	log.Printf("Endpoint hit: %s %s",r.Method,r.URL.Path)
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
 }
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("Status endpoint hit")
+	log.Printf("Endpoint hit : %s %s", r.Method, r.URL.Path)
 	w.Header().Set("Content-Type", "application/json")
 
 	response := map[string]string{
