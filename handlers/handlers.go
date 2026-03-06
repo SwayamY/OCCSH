@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"encoding/json"
-	"log"
-	"os"
+//	"log"
 	"net/http"
+	//"os"
 	"sync/atomic"
 	"time"
 )
@@ -18,17 +18,11 @@ func incrementRequest() {
 
 func HealthHandler(w http.ResponseWriter, r *http.Request) {
 	incrementRequest()
-	log.Printf("Endpoint hit: %s %s", r.Method, r.URL.Path)
-
-	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
 }
 
 func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	incrementRequest()
-	log.Printf("Endpoint hit: %s %s", r.Method, r.URL.Path)
-
-	w.Header().Set("Content-Type", "application/json")
 
 	response := map[string]string{
 		"status": "running",
@@ -38,8 +32,8 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func MetricsHandler(w http.ResponseWriter, r *http.Request) {
+
 	incrementRequest()
-	log.Printf("Endpoint hit: %s %s", r.Method, r.URL.Path)
 
 	uptime := time.Since(startTime).Seconds()
 
@@ -48,16 +42,12 @@ func MetricsHandler(w http.ResponseWriter, r *http.Request) {
 		"request_count":  atomic.LoadUint64(&requestCount),
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
+//func CrashHandler(w http.ResponseWriter, r *http.Request) {
+///
+///	log.Println("Crash triggered")
 
-func CrashHandler(w http.ResponseWriter, r *http.Request){
-	incrementRequest()
-	log.Printf("Endpoint hit: %s %s", r.Method, r.URL.Path)
-
-	log.Println("Simulating service crash..." )
-	w.Write([]byte("server will crash now !"))
-	os.Exit(1)
-	//panic("intentional crash triggered")
-}
+	// simulate real crash
+//	os.Exit(1)
+//}

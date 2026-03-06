@@ -4,8 +4,8 @@ WORKDIR /app
 
 COPY . .
 
-RUN go build -o server
+RUN go build -o occsh
 
 EXPOSE 8080
 
-CMD ["./server"]
+CMD ["./occsh"]

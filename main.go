@@ -1,27 +1,91 @@
 package main
 
 import (
+	"context"
 	"log"
-	"os"
 	"net/http"
+	"os"
+	"time"
+
 	"onecsc/handlers"
+	"onecsc/middleware"
 )
 
-func main() {
-	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-	http.HandleFunc("/health", handlers.HealthHandler)
-	http.HandleFunc("/status", handlers.StatusHandler)
- 	http.HandleFunc("/metrics", handlers.MetricsHandler)
- 	http.HandleFunc("/crash", handlers.CrashHandler)
+var crashChan = make(chan struct{})
+
+func createServer() *http.Server {
+
 	port := os.Getenv("PORT")
 	if port == "" {
-		port=  "8080"
-}
+		port = "8080"
+	}
 
-	log.Println("Starting server on port ",port)
-	err := http.ListenAndServe(":"+port, nil)
-	if err != nil {
-		log.Fatal(err)
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/health", handlers.HealthHandler)
+	mux.HandleFunc("/status", handlers.StatusHandler)
+	mux.HandleFunc("/metrics", handlers.MetricsHandler)
+	mux.HandleFunc("/crash", crashHandler)
+
+	handler := middleware.Logging(mux)
+
+	return &http.Server{
+		Addr:    ":" + port,
+		Handler: handler,
 	}
 }
 
+func crashHandler(w http.ResponseWriter, r *http.Request) {
+
+	log.Println("Crash triggered")
+
+	w.Write([]byte("Server crashing..."))
+
+	go func() {
+		crashChan <- struct{}{}
+	}()
+}
+
+func runServer() error {
+
+	server := createServer()
+
+	go func() {
+		log.Println("Server starting on", server.Addr)
+
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Println("Server error:", err)
+		}
+	}()
+
+	select {
+
+	case <-crashChan:
+		log.Println("Crash signal received")
+
+	case <-time.After(24 * time.Hour):
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	return server.Shutdown(ctx)
+}
+
+func main() {
+
+	log.Println("Starting OCCSH service supervisor")
+
+	for {
+
+		err := runServer()
+
+		if err != nil {
+			log.Println("Server stopped:", err)
+		}
+
+		log.Println("Restarting service in 2 seconds...")
+
+		time.Sleep(2 * time.Second)
+	}
+}
